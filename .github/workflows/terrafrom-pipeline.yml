@@ -1,3 +1,8 @@
+name: Terraform fmt
+on:
+  push:
+    branches:
+      - main
 defaults:
   run:
     working-directory: ./terraform/environments/test/

@@ -1,8 +1,9 @@
 provider "aws" {
-  region = "eu-west-1"default_tags {
+  region = "eu-west-1"
+  default_tags {
     tags = {
-	  owner    = "SeveralClouds"	
-    project  = "terraform-pipeline"
+      owner   = "SeveralClouds"
+      project = "terraform-pipeline"
     }
   }
 }

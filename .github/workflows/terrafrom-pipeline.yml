@@ -8,11 +8,11 @@ on:
     - '!master'   # excludes master
   pull_request:
     branches: [ "main" ]
+env:
+  tf_actions_working_dir: "./terraform/environments/${{ github.environment}}/"
 defaults:
   run:
     shell: bash
-  env:
-    tf_actions_working_dir: "./terraform/environments/${{ github.environment}}/"
 jobs:
   terraform:
     name: 'terraform-fmt-validate-plan'

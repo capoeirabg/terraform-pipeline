@@ -50,9 +50,12 @@ jobs:
 
   terraform-validate:
     name: 'terraform-validate'
+    strategy:
+      matrix:
+        environment: ['test', 'staging', 'production']
     needs: [terraform-fmt, checkov-job]
     runs-on: ubuntu-latest
-    environment: test
+    environment: ${{ matrix.environment }}
     defaults:
       run:
         working-directory: ${{ env.tf_actions_working_dir }}

@@ -16,11 +16,9 @@ jobs:
     name: 'terraform-fmt'
     runs-on: ubuntu-latest
     environment: test
-    env:
-      tf_actions_working_dir: "./terraform/environments/${{ github.environment }}/"
     defaults:
       run:
-        working-directory: "./terraform/environments/${{ github.environment }}/"
+        working-directory: ${{ env.tf_actions_working_dir }}
     permissions:
       pull-requests: write
     steps:
@@ -36,11 +34,9 @@ jobs:
     name: 'terraform-validate'
     runs-on: ubuntu-latest
     environment: test
-    env:
-      tf_actions_working_dir: "./terraform/environments/${{ github.environment }}/"
     defaults:
       run:
-        working-directory: "./terraform/environments/${{ github.environment }}/"
+        working-directory: ${{ env.tf_actions_working_dir }}
     permissions:
       pull-requests: write
     steps:
@@ -61,11 +57,9 @@ jobs:
     name: 'terraform-plan'
     runs-on: ubuntu-latest
     environment: test
-    env:
-      tf_actions_working_dir: "./terraform/environments/${{ github.environment }}/"
     defaults:
       run:
-        working-directory: "./terraform/environments/${{ github.environment }}/"
+        working-directory: ${{ env.tf_actions_working_dir }}
     permissions:
       pull-requests: write
     steps:

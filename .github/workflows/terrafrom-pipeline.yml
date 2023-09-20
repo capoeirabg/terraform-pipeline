@@ -8,6 +8,8 @@ on:
     - '!master'   # excludes master
   pull_request:
     branches: [ "main" ]
+env:
+  tf_actions_working_dir: ${{ vars.tf_actions_working_dir }}
 defaults:
   run:
     shell: bash

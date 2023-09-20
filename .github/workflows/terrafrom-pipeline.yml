@@ -9,7 +9,7 @@ on:
   pull_request:
     branches: [ "main" ]
 env:
-  tf_actions_working_dir: "./terraform/environments/${{ github.environment}}/"
+  tf_actions_working_dir: "./terraform/environments/${{ github.environment }}/"
 defaults:
   run:
     shell: bash
@@ -20,7 +20,7 @@ jobs:
     environment: test
     defaults:
       run:
-        working-directory: ./terraform/environments/test/
+        working-directory: ${{ env.tf_actions_working_dir }}
     permissions:
       pull-requests: write
     steps:

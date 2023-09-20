@@ -51,6 +51,7 @@ jobs:
   terraform-validate:
     name: 'terraform-validate'
     strategy:
+      max-parallel: 1
       matrix:
         environment: ['test', 'staging', 'production']
     needs: [terraform-fmt, checkov-job]
@@ -68,16 +69,17 @@ jobs:
     - name: Terraform Init
       id: init
       run: terraform init
-      continue-on-error: true
+      continue-on-error: false
 
     - name: Terraform Validate
       id: validate
       run: terraform validate -no-color
-      continue-on-error: true
+      continue-on-error: false
 
   terraform-plan:
     name: 'terraform-plan'
     strategy:
+      max-parallel: 1
       matrix:
         environment: ['test', 'staging', 'production']
     needs: [terraform-fmt, checkov-job, terraform-validate]

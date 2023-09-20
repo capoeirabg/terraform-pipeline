@@ -32,6 +32,22 @@ jobs:
       run: terraform fmt -check
       continue-on-error: false
 
+  checkov-job:
+    runs-on: ubuntu-latest
+    name: checkov-action
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@master
+
+      - name: Run Checkov action
+        id: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: ${{ env.tf_actions_working_dir }}
+          #skip_check: CKV_AWS_2 # optional: skip a specific check_id. can be comma separated list
+          framework: terraform # optional: run only on a specific infrastructure {cloudformation,terraform,kubernetes,all}
+          output_format: sarif # optional: the output format, one of: cli, json, junitxml, github_failed_only, or sarif. Default: sarif
+
   terraform-validate:
     name: 'terraform-validate'
     runs-on: ubuntu-latest

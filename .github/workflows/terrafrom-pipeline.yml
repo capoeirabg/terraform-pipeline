@@ -17,10 +17,9 @@ jobs:
   terraform-fmt:
     name: 'terraform-fmt'
     runs-on: ubuntu-latest
-    environment: test
     defaults:
       run:
-        working-directory: ${{ env.tf_actions_working_dir }}
+        working-directory: .
     permissions:
       pull-requests: write
     steps:
@@ -29,7 +28,7 @@ jobs:
 
     - name: Terraform fmt
       id: fmt
-      run: terraform fmt -check
+      run: terraform fmt -check -recursive
       continue-on-error: false
 
   checkov-job:
@@ -43,7 +42,7 @@ jobs:
         id: checkov
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: ${{ env.tf_actions_working_dir }}
+          directory: .
           #skip_check: CKV_AWS_2 # optional: skip a specific check_id. can be comma separated list
           framework: terraform # optional: run only on a specific infrastructure {cloudformation,terraform,kubernetes,all}
           output_format: sarif # optional: the output format, one of: cli, json, junitxml, github_failed_only, or sarif. Default: sarif
@@ -112,8 +111,7 @@ jobs:
           })
 
           // 2. Prepare format of the comment
-          const output = `#### Terraform Format and Style 🖌\`${{ job.terraform-fmt.steps.fmt.outcome }}\`
-          #### Terraform Initialization ⚙️\`${{ job.terraform-validate.steps.init.outcome }}\`
+          const output = `#### Terraform Initialization ⚙️\`${{ job.terraform-validate.steps.init.outcome }}\`
           #### Terraform Validation 🤖\`${{ job.terraform-validate.steps.validate.outcome }}\`
           <details><summary>Validation Output</summary>
 

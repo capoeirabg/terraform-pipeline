@@ -8,14 +8,12 @@ on:
     - '!master'   # excludes master
   pull_request:
     branches: [ "main" ]
-env:
-  tf_actions_working_dir: "./terraform/environments/${{ github.environment }}/"
 defaults:
   run:
     shell: bash
 jobs:
-  terraform:
-    name: 'terraform-fmt-validate-plan'
+  terraform-fmt:
+    name: 'terraform-fmt'
     runs-on: ubuntu-latest
     environment: test
     defaults:
@@ -32,6 +30,19 @@ jobs:
       run: terraform fmt -check
       continue-on-error: false
 
+  terraform-validate:
+    name: 'terraform-validate'
+    runs-on: ubuntu-latest
+    environment: test
+    defaults:
+      run:
+        working-directory: "./terraform/environments/${{ github.environment }}/"
+    permissions:
+      pull-requests: write
+    steps:
+    - uses: actions/checkout@v3
+    - uses: hashicorp/setup-terraform@v2
+
     - name: Terraform Init
       id: init
       run: terraform init
@@ -40,6 +51,24 @@ jobs:
     - name: Terraform Validate
       id: validate
       run: terraform validate -no-color
+      continue-on-error: false
+
+  terraform-plan:
+    name: 'terraform-plan'
+    runs-on: ubuntu-latest
+    environment: test
+    defaults:
+      run:
+        working-directory: "./terraform/environments/${{ github.environment }}/"
+    permissions:
+      pull-requests: write
+    steps:
+    - uses: actions/checkout@v3
+    - uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
       continue-on-error: false
 
     - name: Terraform Plan
@@ -51,6 +80,7 @@ jobs:
       if: github.event_name == 'pull_request'
       env:
         PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        tf_actions_working_dir: "./terraform/environments/${{ github.environment }}/"
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
@@ -65,18 +95,18 @@ jobs:
           })
 
           // 2. Prepare format of the comment
-          const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
-          #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
-          #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+          const output = `#### Terraform Format and Style 🖌\`${{ job.terraform-fmt.steps.fmt.outcome }}\`
+          #### Terraform Initialization ⚙️\`${{ job.terraform-validate.steps.init.outcome }}\`
+          #### Terraform Validation 🤖\`${{ job.terraform-validate.steps.validate.outcome }}\`
           <details><summary>Validation Output</summary>
 
           \`\`\`\n
-          ${{ steps.validate.outputs.stdout }}
+          ${{ job.terraform-validate.steps.validate.outputs.stdout }}
           \`\`\`
 
           </details>
 
-          #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+          #### Terraform Plan 📖\`${{ job.terraform-plan.steps.plan.outcome }}\`
 
           <details><summary>Show Plan</summary>
 

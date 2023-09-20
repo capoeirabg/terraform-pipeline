@@ -16,6 +16,8 @@ jobs:
     name: 'terraform-fmt'
     runs-on: ubuntu-latest
     environment: test
+    env:
+      tf_actions_working_dir: "./terraform/environments/${{ github.environment }}/"
     defaults:
       run:
         working-directory: "./terraform/environments/${{ github.environment }}/"
@@ -34,6 +36,8 @@ jobs:
     name: 'terraform-validate'
     runs-on: ubuntu-latest
     environment: test
+    env:
+      tf_actions_working_dir: "./terraform/environments/${{ github.environment }}/"
     defaults:
       run:
         working-directory: "./terraform/environments/${{ github.environment }}/"
@@ -57,6 +61,8 @@ jobs:
     name: 'terraform-plan'
     runs-on: ubuntu-latest
     environment: test
+    env:
+      tf_actions_working_dir: "./terraform/environments/${{ github.environment }}/"
     defaults:
       run:
         working-directory: "./terraform/environments/${{ github.environment }}/"
@@ -80,7 +86,6 @@ jobs:
       if: github.event_name == 'pull_request'
       env:
         PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
-        tf_actions_working_dir: "./terraform/environments/${{ github.environment }}/"
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |

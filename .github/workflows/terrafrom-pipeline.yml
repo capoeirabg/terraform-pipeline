@@ -105,6 +105,7 @@ jobs:
       run:
         working-directory: ${{ env.tf_actions_working_dir }}
     permissions:
+      id-token: write
       pull-requests: write
     steps:
     - uses: actions/checkout@v3
@@ -133,6 +134,7 @@ jobs:
       run:
         working-directory: ${{ env.tf_actions_working_dir }}
     permissions:
+      id-token: write
       pull-requests: write
     steps:
     - uses: actions/checkout@v3

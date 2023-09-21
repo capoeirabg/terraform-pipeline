@@ -36,7 +36,7 @@ jobs:
         run: |
           markdownlint **/*.md
   
-  terraform-fmt:
+  run-terraform-fmt:
     name: 'terraform-fmt'
     runs-on: ubuntu-latest
     defaults:
@@ -85,9 +85,9 @@ jobs:
       #   with:
       #     sarif_file: results.sarif
 
-  terraform-validate:
+  run-terraform-validate:
     name: 'terraform-validate'
-    needs: [terraform-fmt, run-checkov]
+    needs: [run-terraform-fmt, run-checkov, run-editorconfig-check, run-markdown-lint]
     runs-on: ubuntu-latest
     environment: test
     defaults:
@@ -109,9 +109,9 @@ jobs:
       run: terraform validate -no-color
       continue-on-error: false
 
-  terraform-plan:
+  run-terraform-plan:
     name: 'terraform-plan'
-    needs: [terraform-fmt, run-checkov, terraform-validate]
+    needs: [run-terraform-validate]
     runs-on: ubuntu-latest
     environment: test
     defaults:
@@ -133,9 +133,9 @@ jobs:
       run: terraform plan -no-color -input=false
       continue-on-error: false
 
-  terraform-apply:
+  run-terraform-apply:
     name: 'terraform-apply'
-    needs: [terraform-fmt, run-checkov, terraform-validate, terraform-plan]
+    needs: [run-terraform-plan]
     if: github.ref == 'refs/heads/"main"' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: test

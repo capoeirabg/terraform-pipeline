@@ -11,7 +11,8 @@ on:
 env:
   tf_actions_working_dir: ${{ vars.tf_actions_working_dir }}
 defaults:
-  run: echo "environment=test" >> "$GITHUB_ENV"
+  run:
+    shell: bash
 jobs:
   initial-start:
     runs-on: ubuntu-latest
@@ -50,7 +51,6 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash
         working-directory: .
     permissions:
       pull-requests: write
@@ -102,7 +102,6 @@ jobs:
     environment: test
     defaults:
       run:
-        shell: bash
         working-directory: ${{ env.tf_actions_working_dir }}
     permissions:
       pull-requests: write
@@ -127,7 +126,6 @@ jobs:
     environment: test
     defaults:
       run:
-        shell: bash
         working-directory: ${{ env.tf_actions_working_dir }}
     permissions:
       pull-requests: write

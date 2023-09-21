@@ -10,8 +10,8 @@ on:
     branches: [ "main" ]
 env:
   tf_actions_working_dir: ${{ vars.tf_actions_working_dir }}
-  environment: test
 defaults:
+  environment: test
   run:
     shell: bash
 jobs:

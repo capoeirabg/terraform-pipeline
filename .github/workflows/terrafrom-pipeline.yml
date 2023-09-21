@@ -15,7 +15,7 @@ env:
   AWS_REGION: eu-central-1
 
 permissions:
-  id-token: write
+  id-token: write # need this so that we can consume the OIDC token to authentificate
   contents: read # for actions/checkout to fetch code
   security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
   actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status

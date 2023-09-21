@@ -97,7 +97,7 @@ jobs:
 
   terraform-validate:
     name: 'terraform-validate'
-    needs: [terraform-fmt, checkov-job]
+    needs: [terraform-fmt, run-checkov]
     runs-on: ubuntu-latest
     environment: test
     defaults:
@@ -121,7 +121,7 @@ jobs:
 
   terraform-plan:
     name: 'terraform-plan'
-    needs: [terraform-fmt, checkov-job, terraform-validate]
+    needs: [terraform-fmt, run-checkov, terraform-validate]
     runs-on: ubuntu-latest
     environment: test
     defaults:
@@ -145,7 +145,7 @@ jobs:
 
   terraform-apply:
     name: 'terraform-apply'
-    needs: [terraform-fmt, checkov-job, terraform-validate, terraform-plan]
+    needs: [terraform-fmt, run-checkov, terraform-validate, terraform-plan]
     if: github.ref == 'refs/heads/"main"' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: test

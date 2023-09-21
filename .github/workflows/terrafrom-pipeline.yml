@@ -1,4 +1,4 @@
-name: terraform_pipeline_non_prod
+name: terraform_pipeline_test
 on:
   push:
     branches:    

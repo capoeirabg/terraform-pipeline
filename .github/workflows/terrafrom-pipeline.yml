@@ -104,6 +104,7 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v3
       with:
         role-to-assume: ${{ secrets.OIDC_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
 
     - name: Terraform Init
       id: init

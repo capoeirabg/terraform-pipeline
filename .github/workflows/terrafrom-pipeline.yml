@@ -113,7 +113,7 @@ jobs:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v3
       with:
-        role-to-assume: ${{ secrets.OIDC_ARN }}
+        role-to-assume: arn:aws:iam::765718367044:role/capoeirabg-terraform-pipel-GitHubActionsServiceRole-fPvFfhAIi7ro	
         aws-region: ${{ env.AWS_REGION }}
 
     - name: Terraform Init

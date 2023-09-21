@@ -28,7 +28,7 @@ defaults:
 jobs:
   run-editorconfig-check: 
     runs-on: ubuntu-latest
-    name: .editorconfig check
+    name: editorconfig check
     steps:
       - uses: actions/checkout@v3
       - uses: editorconfig-checker/action-editorconfig-checker@main

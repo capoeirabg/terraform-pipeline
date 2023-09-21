@@ -1,4 +1,5 @@
 name: terraform_pipeline_test
+
 on:
   push:
     branches:    
@@ -8,12 +9,21 @@ on:
     - '!main'     # excludes main
   pull_request:
     branches: [ "main" ]
+
 env:
   tf_actions_working_dir: ${{ vars.tf_actions_working_dir }}
   AWS_REGION: eu-central-1
+
+permissions:
+  id-token: write
+  contents: read # for actions/checkout to fetch code
+  security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+  actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+
 defaults:
   run:
     shell: bash
+
 jobs:
   run-editorconfig-check: 
     runs-on: ubuntu-latest

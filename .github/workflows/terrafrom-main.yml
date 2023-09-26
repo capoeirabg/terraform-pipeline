@@ -1,4 +1,4 @@
-name: terraform_pipeline_main
+name: terraform_main
 
 on:
   pull_request:

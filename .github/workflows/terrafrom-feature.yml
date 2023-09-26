@@ -1,4 +1,4 @@
-name: terraform_pipeline_feature
+name: terraform_feature
 
 on:
   push:
@@ -138,7 +138,7 @@ jobs:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v3
       with:
-        role-to-assume: arn:aws:iam::765718367044:role/capoeirabg-terraform-pipel-GitHubActionsServiceRole-fPvFfhAIi7ro	
+        role-to-assume: ${{ secrets.OIDC_ARN }}	
         aws-region: ${{ env.AWS_REGION }}
 
     - name: Terraform Init

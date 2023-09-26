@@ -1,0 +1,215 @@
+name: terraform_main
+
+on:
+  pull_request:
+    branches: 
+      - main
+    types: [closed]
+
+env:
+  AWS_REGION: eu-central-1
+  env_name: test
+  tf_actions_working_dir: ./terraform/environments/test/
+
+permissions:
+  id-token: write # need this so that we can consume the OIDC token to authentificate
+  contents: read # for actions/checkout to fetch code
+  security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+  actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+  pull-requests: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  initial-start:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    name: initial start
+    steps:
+      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+
+  run-editorconfig-check: 
+    needs: [initial-start]
+    runs-on: ubuntu-latest
+    name: editorconfig check
+    steps:
+      - uses: actions/checkout@v3
+      - uses: editorconfig-checker/action-editorconfig-checker@main
+      - run: editorconfig-checker
+  
+  run-markdown-lint: 
+    needs: [initial-start]
+    runs-on: ubuntu-latest
+    name: markdownlint lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        
+      - name: Install dependencies
+        run: npm install -g markdownlint-cli
+
+      - name: Run Markdown linting
+        run: |
+          markdownlint **/*.md
+  
+  run-terraform-fmt:
+    needs: [initial-start]
+    name: 'terraform-fmt'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+    - uses: actions/checkout@v3
+    - uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform fmt
+      id: fmt
+      run: terraform fmt -check -recursive
+      continue-on-error: false
+
+  run-checkov:
+    needs: [initial-start]
+    runs-on: ubuntu-latest
+    env:
+      CHECKOV_SKIPPED_CHECKS:
+    name: analysis with Checkov 
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@master
+
+      - name: Checkov GitHub Action
+        id: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          #skip_check: CKV_AWS_2 # optional: skip a specific check_id. can be comma separated list
+          framework: terraform # optional: run only on a specific infrastructure {cloudformation,terraform,kubernetes,all}
+          output_format: cli # optional: the output format, one of: cli, json, junitxml, github_failed_only, or sarif. Default: sarif
+          output_file_path: console
+          skip_check: ${{ env.CHECKOV_SKIPPED_CHECKS }}
+          quiet: true
+      # - name: Upload SARIF file
+      #   uses: github/codeql-action/upload-sarif@v2
+
+      #   # Results are generated only on a success or failure
+      #   # this is required since GitHub by default won't run the next step
+      #   # when the previous one has failed. Security checks that do not pass will 'fail'.
+      #   # An alternative is to add `continue-on-error: true` to the previous step
+      #   # Or 'soft_fail: true' to checkov.
+      #   if: success() || failure()
+      #   with:
+      #     sarif_file: results.sarif
+
+  # run-hadolint:
+  #   needs: [initial-start]
+  #   runs-on: ubuntu-latest
+  #   name: run hadolint
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+
+  #     - name: Run Hadolint
+  #       uses: hadolint/hadolint-action@v3.1.0
+  #       with:
+  #         dockerfile: Dockerfile
+
+  run-terraform-validate:
+    name: 'terraform-validate'
+    needs: [run-terraform-fmt, run-checkov, run-editorconfig-check, run-markdown-lint]
+    runs-on: ubuntu-latest
+    environment: 
+      name: $env_name
+    defaults:
+      run:
+        working-directory: ${{ env.tf_actions_working_dir }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: hashicorp/setup-terraform@v2
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: arn:aws:iam::765718367044:role/capoeirabg-terraform-pipel-GitHubActionsServiceRole-fPvFfhAIi7ro	
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate -no-color
+
+  run-terraform-plan:
+    name: 'terraform-plan'
+    needs: [run-terraform-validate]
+    runs-on: ubuntu-latest
+    environment: 
+      name: $env_name
+    defaults:
+      run:
+        working-directory: ${{ env.tf_actions_working_dir }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: hashicorp/setup-terraform@v2
+    - uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: ${{ secrets.OIDC_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -no-color -input=false
+
+  run-terraform-apply:
+    name: 'terraform-apply'
+    needs: [run-terraform-plan]
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: 
+      name: $env_name
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ env.tf_actions_working_dir }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: hashicorp/setup-terraform@v2
+    - uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: ${{ secrets.OIDC_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+
+    - name: Terraform Apply
+      id: apply
+      run: terraform apply -auto-approve -input=false
+
+  send-slack-notification:
+    needs: [run-terraform-apply]
+    runs-on: ubuntu-latest
+    environment:
+      name: $env_name
+    name: send notification in Slack
+    steps:
+      - uses: actions/checkout@v3
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.WEBHOOK }}
+          SLACK_COLOR: "#008000"
+          SLACK_TITLE: Successful deployment
+          SLACK_ICON_EMOJI: ":bell:"
+          SLACK_LINK_NAMES: true
+          SLACK_USERNAME: GitHub Actions
+          SLACK_MESSAGE: Terraforn resources deployed to ${{ env.env_name }} environment

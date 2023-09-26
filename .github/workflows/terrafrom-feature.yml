@@ -1,18 +1,20 @@
-name: terraform_pipeline_test
+name: terraform_pipeline_feature
 
 on:
   push:
-    branches:    
-    - '*'         # matches every branch that doesn't contain a '/'
-    - '*/*'       # matches every branch containing a single '/'
-    - '**'        # matches every branch
-    - '!main'     # excludes main
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - 'feature/*'
+    # - '*'         # matches every branch that doesn't contain a '/'
+    # - '*/*'       # matches every branch containing a single '/'
+    # - '**'        # matches every branch
+    # - '!branch_name'     # excludes branch name
+  #   #Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 env:
-  tf_actions_working_dir: ${{ vars.tf_actions_working_dir }}
   AWS_REGION: eu-central-1
+  tf_actions_working_dir: ./terraform/environments/test/
+  terraform_version: 1.5.6
 
 permissions:
   id-token: write # need this so that we can consume the OIDC token to authentificate
@@ -26,7 +28,14 @@ defaults:
     shell: bash
 
 jobs:
+  initial-start:
+    runs-on: ubuntu-latest
+    name: initial start
+    steps:
+      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+
   run-editorconfig-check: 
+    needs: [initial-start]
     runs-on: ubuntu-latest
     name: editorconfig check
     steps:
@@ -35,6 +44,7 @@ jobs:
       - run: editorconfig-checker
   
   run-markdown-lint: 
+    needs: [initial-start]
     runs-on: ubuntu-latest
     name: markdownlint lint
     steps:
@@ -49,6 +59,7 @@ jobs:
           markdownlint **/*.md
   
   run-terraform-fmt:
+    needs: [initial-start]
     name: 'terraform-fmt'
     runs-on: ubuntu-latest
     defaults:
@@ -57,6 +68,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.terraform_version }}
 
     - name: Terraform fmt
       id: fmt
@@ -64,9 +77,8 @@ jobs:
       continue-on-error: false
 
   run-checkov:
+    needs: [initial-start]
     runs-on: ubuntu-latest
-    env:
-      CHECKOV_SKIPPED_CHECKS:
     name: analysis with Checkov 
     steps:
       - name: Checkout repo
@@ -95,17 +107,33 @@ jobs:
       #   with:
       #     sarif_file: results.sarif
 
+  # run-hadolint:
+  #   needs: [initial-start]
+  #   runs-on: ubuntu-latest
+  #   name: run hadolint
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+
+  #     - name: Run Hadolint
+  #       uses: hadolint/hadolint-action@v3.1.0
+  #       with:
+  #         dockerfile: Dockerfile
+
   run-terraform-validate:
     name: 'terraform-validate'
     needs: [run-terraform-fmt, run-checkov, run-editorconfig-check, run-markdown-lint]
     runs-on: ubuntu-latest
-    environment: test
+    environment: 
+      name: test
     defaults:
       run:
         working-directory: ${{ env.tf_actions_working_dir }}
     steps:
     - uses: actions/checkout@v3
     - uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.terraform_version }}
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v3
@@ -125,13 +153,16 @@ jobs:
     name: 'terraform-plan'
     needs: [run-terraform-validate]
     runs-on: ubuntu-latest
-    environment: test
+    environment: 
+      name: test
     defaults:
       run:
         working-directory: ${{ env.tf_actions_working_dir }}
     steps:
     - uses: actions/checkout@v3
     - uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.terraform_version }}
     - uses: aws-actions/configure-aws-credentials@v3
       with:
         role-to-assume: ${{ secrets.OIDC_ARN }}
@@ -148,9 +179,10 @@ jobs:
   run-terraform-apply:
     name: 'terraform-apply'
     needs: [run-terraform-plan]
-    if: github.ref == 'refs/heads/"main"' && github.event_name == 'push'
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    environment: test
+    environment: 
+      name: test
     defaults:
       run:
         shell: bash
@@ -158,6 +190,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.terraform_version }}
+    - uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: ${{ secrets.OIDC_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
 
     - name: Terraform Init
       id: init
@@ -165,4 +203,23 @@ jobs:
 
     - name: Terraform Apply
       id: apply
-      run: terraform plan -auto-approve -input=false
+      run: terraform apply -auto-approve -input=false
+
+  send-slack-notification:
+    needs: [run-terraform-apply]
+    runs-on: ubuntu-latest
+    environment:
+      name: test
+    name: send notification in Slack
+    steps:
+      - uses: actions/checkout@v3
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.WEBHOOK }}
+          SLACK_COLOR: "#008000"
+          SLACK_TITLE: Successful deployment
+          SLACK_ICON_EMOJI: ":bell:"
+          SLACK_LINK_NAMES: true
+          SLACK_USERNAME: GitHub Actions
+          SLACK_MESSAGE: Terraforn resources deployed to ${{ env.env_name }} environment
